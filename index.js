@@ -2,8 +2,11 @@ const hapi = require('@hapi/hapi');
 const env = require('./env.js');
 const Movies = require('./respository/movie');
 
+const AuthBearer = require('hapi-auth-bearer-token'); //-------- AuthBearer -------
+
 const express = require('express');
 const app = express();
+
 
 const path = require('path');
       bodyParser = require("body-parser");
@@ -21,24 +24,74 @@ console.log('Running Environment: ' + env);
 const init = async () => {
 
   const server = hapi.Server({
-    port: api_port,
-    host: '0.0.0.0',
-    routes: {
-        cors: true
+      port: api_port,
+      host: '0.0.0.0',
+      routes: {
+          //cors: true
+          "cors": {
+              "origin": ["Access-Control-Allow-Origin", "192.168.179.111:3000"],
+              "headers": ["Accept", "Content-Type"],
+              "additionalHeaders": ["X-Requested-With"]
+          }
       }
-    });
+
+  });
   
     //---------
   
+
     await server.register(require('@hapi/inert'));
-  
-    server.route({
-      method: "GET",
-      path: "/",
-      handler: () => {
-        return '<h3> Welcome to API Back-end Ver. 1.0.0</h3>';
-      }
+    await server.register(AuthBearer);
+    server.auth.strategy('simple', 'bearer-access-token', {
+        allowQueryToken: true,              // optional, false by default
+        validate: async (request, token, h) => {
+
+            // here is where you validate your token
+            // comparing with token from your database for example
+            const isValid = token === '1234567890'
+
+            const credentials = { token };
+            const artifacts = { test: 'info' };
+
+            return { isValid, credentials, artifacts };
+        }
     });
+
+    server.auth.default('simple');
+
+    //-------- AuthBearer -------
+/*
+    server.route({
+        method: "GET",
+        path: "/",
+        config: {
+            cors: {
+                origin: ['*'],
+                additionalHeaders: ['cache-control', 'x-requested-width']
+            }
+        },
+        handler: () => {
+            return '<h3> Welcome to API Back-end Ver. 1.0.0</h3>';
+        }
+    });
+*/
+
+    server.route({
+        method: "GET",
+        path: "/",
+        config: {
+            cors: {
+                origin: ['*'],
+                additionalHeaders: ['cache-control', 'x-requested-width'],
+                credentials: true
+            }
+        },
+        handler: () => {
+            return '<h3> Welcome to API Back-end Ver. 1.0.0</h3>';
+        }
+    });
+
+
   
   
       //API: http://localhost:3001/api/movie/all
@@ -48,7 +101,8 @@ const init = async () => {
         config: {
             cors: {
                 origin: ['*'],
-                additionalHeaders: ['cache-control', 'x-requested-width']
+                additionalHeaders: ['cache-control', 'x-requested-width'],
+                credentials: true
             }
         },
         handler: async function (request, reply) {
@@ -76,8 +130,9 @@ const init = async () => {
       path: '/api/movie/search',
       config: {
         cors: {
-          origin: ['http://localhost:3001'],
-          additionalHeaders: ['cache-control', 'x-requested-width']
+          origin: ['*'],
+          additionalHeaders: ['cache-control', 'x-requested-width'],
+          credentials: true
         }
       },
       handler: async function (request, reply) {
@@ -108,7 +163,8 @@ const init = async () => {
           },
           cors: {
               origin: ['*'],
-              additionalHeaders: ['cache-control', 'x-requested-width']
+              additionalHeaders: ['cache-control', 'x-requested-width'],
+              credentials:true
           }
       },
       handler: async function (request, reply) {
